@@ -1,0 +1,6 @@
+out/
+/out/
+.idea/
+*.class
+.zip
+.rar
