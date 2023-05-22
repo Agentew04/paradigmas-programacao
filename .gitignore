@@ -4,3 +4,8 @@ out/
 *.class
 .zip
 .rar
+bin/
+obj/
+/packages/
+riderModule.iml
+/_ReSharper.Caches/
