@@ -2,8 +2,8 @@ out/
 /out/
 .idea/
 *.class
-.zip
-.rar
+*.zip
+*.rar
 bin/
 obj/
 /packages/

@@ -4,7 +4,8 @@ namespace BolsaValores;
 
 public static class Program {
     public static void Main(string[] args) {
-        Menu menu = new();
+        WalletManager walletManager = new();
+        Menu menu = new(walletManager);
 
         menu.StartMenu();
         
