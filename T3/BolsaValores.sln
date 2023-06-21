@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "T3", "T3.csproj", "{1DA082F7-E361-4E4E-B739-E31F7593E42F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BolsaValores", "BolsaValores.csproj", "{1DA082F7-E361-4E4E-B739-E31F7593E42F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
