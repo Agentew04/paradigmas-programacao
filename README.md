@@ -13,10 +13,13 @@ estão encontrados na [pasta do projeto](./T1/README.md)
 
 ## Trabalho 2
 
+O trabalho 2 é uma lista de exercícios sobre a classe `Stream` em Java.
 Mais detalhes sobre a implementação e os requisitos do trabalho original
 estão encontrados na [pasta do projeto](./T2/README.md)
 
 ## Trabalho 3 - Final
 
-Mais detalhes sobre a implementação e os requisitos do trabalho original
-estão encontrados na [pasta do projeto](./T3/README.md)
+O trabalho 3 é um visualizador de valorização de ativos sobre uma
+carteira de investimentos digital. Mais detalhes sobre a implementação e
+os requisitos do trabalho original estão encontrados na 
+[pasta do projeto](./T3/README.md)
