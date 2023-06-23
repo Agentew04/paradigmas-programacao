@@ -3,13 +3,13 @@ using BolsaValores.Exceptions;
 namespace BolsaValores; 
 
 public class Menu {
-    private WalletManager _walletManager;
+    private readonly WalletManager _walletManager;
     
     public Menu(WalletManager walletManager) {
         _walletManager = walletManager;
     }
 
-    private void ShowMainMenuWelcome() {
+    private static void ShowMainMenuWelcome() {
         Console.WriteLine(@"
 Bem-vindo ao sistema da Bolsa de Valores!
 Você gostaria de criar uma carteira ou acessar uma existente?");
@@ -55,7 +55,7 @@ Você gostaria de criar uma carteira ou acessar uma existente?");
                     Console.Clear();
                     string accessLogin = Console.ReadLine() ?? "";
                     var wallet = _walletManager.GetWallet(accessLogin);
-                    if(wallet)
+                    //if(wallet)
                     Console.WriteLine("Acessando a carteira...");
                     Console.WriteLine("fim acesso carteira");
                     break;
