@@ -6,9 +6,10 @@ namespace BolsaValores.Storage;
 /// Gerencia e cria conexões para o banco de dados
 /// </summary>
 public static class DatabaseConnector {
-    private const string User = "root";
-    private const string Pwd = "abc12345";
-    private const string Server = "localhost";
+    // talvez carregar em runtime de um .env?
+    private const string User = "bolsa";
+    private const string Pwd = "1234567890";
+    private const string Server = "noteserver";
     private const string Database = "bolsa";
 
     private static string GetUrl() {

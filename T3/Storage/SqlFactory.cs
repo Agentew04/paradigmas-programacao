@@ -193,7 +193,9 @@ public static class SqlFactory {
                 continue;
             }
 
-            if ((sql[i] == ' ' || sql[i] == ',') && reading) {
+            bool isLower = sql[i] >= 'a' && sql[i] <= 'z';
+            bool isUpper = sql[i] >= 'A' && sql[i] <= 'Z';
+            if (!isLower && !isUpper && reading) {
                 reading = false;
                 parameters.Add(sb.ToString());
                 sb.Clear();

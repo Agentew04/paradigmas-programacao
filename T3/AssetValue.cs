@@ -1,7 +1,7 @@
 using System.Reflection;
 using BolsaValores.Storage.Attributes;
 
-namespace BolsaValores.Storage; 
+namespace BolsaValores; 
 
 [Serializable]
 [Table("cotacao")]
