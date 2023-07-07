@@ -1,13 +1,8 @@
-﻿using BolsaValores.Storage;
-using MySqlConnector;
-
-namespace BolsaValores;
+﻿namespace BolsaValores;
 
 public static class Program {
     public static void Main(string[] args) {
-        WalletManager walletManager = new();
-        Menu menu = new(walletManager);
+        Menu menu = new Menu();
         menu.StartMenu();
-
     }
 }

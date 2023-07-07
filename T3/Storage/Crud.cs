@@ -15,6 +15,27 @@ public class Crud<T> : ICrud<T> {
     public Crud() {
         _conn = DatabaseConnector.GetConn();
     }
+    
+    public V? GetLast<V>(string columnName) {
+        // this sql comes ready, doesnt need any params
+        string sql = SqlFactory.GetMaxSql(typeof(T), columnName);
+        try {
+            _conn.Open();
+            MySqlCommand cmd = _conn.CreateCommand();
+            cmd.CommandText = sql;
+            MySqlDataReader reader = cmd.ExecuteReader();
+            reader.Read();
+            object valObj = reader.GetValue(0);
+            if (valObj is V valV)
+                return valV;
+            else {
+                return default;
+            } 
+        }
+        finally {
+            _conn.Close();
+        }
+    }
 
     public void Add(T t) {
         try {
@@ -28,6 +49,8 @@ public class Crud<T> : ICrud<T> {
             _conn.Close();
         }
     }
+
+    
 
     public void Add(IEnumerable<T> t) {
         try {
@@ -73,6 +96,8 @@ public class Crud<T> : ICrud<T> {
         try {
             _conn.Open();
             MySqlCommand cmd = _conn.CreateCommand();
+            // TODO: generate a sql update with a where clause?
+            cmd.CommandText = SqlFactory.GetUpdateSql(typeof(T));
             SqlFactory.FillCommand(cmd, t);
             return cmd.ExecuteNonQuery();
         }
@@ -97,6 +122,7 @@ public class Crud<T> : ICrud<T> {
         try {
             _conn.Open();
             MySqlCommand cmd = _conn.CreateCommand();
+            cmd.CommandText = SqlFactory.GetDeleteSql(typeof(T));
             SqlFactory.FillCommand(cmd, t);
             return cmd.ExecuteNonQuery();
         }

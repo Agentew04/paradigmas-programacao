@@ -2,6 +2,8 @@ using System.Data;
 using System.Data.Common;
 using System.Reflection;
 using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization.Metadata;
 using BolsaValores.Exceptions;
 using BolsaValores.Storage.Attributes;
 using MySqlConnector;
@@ -28,35 +30,28 @@ public static class SqlFactory {
         public string Name { get; init; }
         public string Column { get; init; }
         public bool PrimaryKey { get; init; }
-
-        public FieldInfo? FieldInfo { get; init; }
-        public PropertyInfo? PropertyInfo { get; init; }
+        
+        public FieldInfo FieldInfo { get; init; }
     }
 
     private static IEnumerable<Member> GetMembers(Type type) {
-        List<Member> members = type.GetFields()
+        return type.GetFields()
             .Select(field => new Member {
                 Name = field.Name, 
-                PrimaryKey = field.GetCustomAttribute<PrimaryKeyAttribute>() is not null, 
+                PrimaryKey = IsPrimaryKey(field), 
                 Column = field.GetCustomAttribute<ColumnAttribute>()?.Name ?? field.Name,
-                FieldInfo = field,
-                PropertyInfo = null
+                FieldInfo = field
             }).ToList();
-        
-        members.AddRange(type.GetProperties()
-            .Select(property => new Member {
-                Name = property.Name, 
-                PrimaryKey = property.GetCustomAttribute<PrimaryKeyAttribute>() is not null, 
-                Column = property.GetCustomAttribute<ColumnAttribute>()?.Name ?? property.Name,
-                PropertyInfo = property,
-                FieldInfo = null
-            }));
-        return members;
     }
 
-    private static bool IsSerializable(MemberInfo type) {
-        SerializableAttribute? serializable = type.GetCustomAttribute<SerializableAttribute>();
+    private static bool IsSerializable(MemberInfo info) {
+        SerializableAttribute? serializable = info.GetCustomAttribute<SerializableAttribute>();
         return serializable is not null;
+    }
+
+    private static bool IsPrimaryKey(MemberInfo info) {
+        PrimaryKeyAttribute? primaryKey = info.GetCustomAttribute<PrimaryKeyAttribute>();
+        return primaryKey is not null;
     }
     
     /// <summary>
@@ -106,9 +101,9 @@ public static class SqlFactory {
         StringBuilder values = new();
 
         IEnumerable<Member> members = GetMembers(type);
-        foreach (Member member in members) {
-            columns.Append(member.Column + ',');
-            values.Append('@' + member.Column + ',');
+        foreach (string column in members.Select(x => x.Column)) {
+            columns.Append(column + ',');
+            values.Append('@' + column + ',');
         }
         columns.Remove(columns.Length - 1, 1);
         values.Remove(values.Length - 1, 1);
@@ -210,6 +205,12 @@ public static class SqlFactory {
         return parameters;
     }
 
+    /// <summary>
+    /// Preenche um comando sql com variáveis de <paramref name="t"/>.
+    /// </summary>
+    /// <param name="cmd">O comando a ser preenchido</param>
+    /// <param name="t">A variável de tipo <typeparamref name="T"/> que fornecerá os dados</param>
+    /// <typeparam name="T">O tipo do dado a ser usado</typeparam>
     public static void FillCommand<T>(MySqlCommand cmd, T t) {
         Type type = typeof(T);
 
@@ -218,17 +219,46 @@ public static class SqlFactory {
             Member paramMember = GetMembers(type)
                 .FirstOrDefault(x => x.Column == parameter);
 
-            object? value = paramMember.PropertyInfo?.GetValue(t) ?? paramMember.FieldInfo?.GetValue(t);
+            object? value = paramMember.FieldInfo?.GetValue(t);
             cmd.Parameters.AddWithValue('@' + parameter, value);
         }
     }
 
+    private static void SetProperty<T>(FieldInfo field, T t, object? value) {
+        bool jsonSerialize = field.GetCustomAttribute<JsonSerializeAttribute>() is not null;
+        if (jsonSerialize) {
+            if(value is not string json)
+                throw new ArgumentException($"Argument {nameof(value)} must be a string");
+            Type fieldType = field.FieldType;
+            object? obj = JsonSerializer.Deserialize(json,fieldType);
+            field.SetValue(t, obj);
+            return;
+        }
+        
+        // if target field is char and value is string, get first char
+        if (field.FieldType == typeof(char) && value is string str) {
+            value = str[0];
+        }
+        
+        
+        field.SetValue(t, value);
+    }
+
+    /// <summary>
+    /// Lê um item a partir de um leitor de consultas MySql. Utiliza
+    /// reflexão e atributos para descobrir quais campos devem ser
+    /// preenchidos.
+    /// </summary>
+    /// <param name="reader">O leitor da consulta realizada.</param>
+    /// <typeparam name="T">O tipo a ser avaliado</typeparam>
+    /// <returns>Uma instância de tipo <typeparamref name="T"/> preenchida com os dados lidos
+    /// ou <see langword="null"/> se não foi possível ler o objeto.</returns>
     public static T? ReadItem<T>(MySqlDataReader reader) {
         if (!reader.HasRows)
             return default;
 
         Type type = typeof(T);
-        IEnumerable<Member> members = GetMembers(type);
+        List<Member> members = GetMembers(type).ToList();
 
         T t = Activator.CreateInstance<T>();
 
@@ -238,16 +268,30 @@ public static class SqlFactory {
             object columnValue = reader.GetValue(i);
 
             Member member = members.FirstOrDefault(x => x.Column == columnName);
-
-            bool isField = member.FieldInfo is not null && member.PropertyInfo is null;
-            if (isField) {
-                member.FieldInfo?.SetValue(t, columnValue);
-            }else {
-                member.PropertyInfo?.SetValue(t, columnValue);
-            }
+            SetProperty(member.FieldInfo, t, columnValue);
         }
 
-
         return t;
+    }
+
+    /// <summary>
+    /// Cria um texto de consulta SQL para ver qual é o maior valor de uma determinada coluna.
+    /// Normalmente usado em colunas que são chaves primárias e são auto incrementadas.
+    /// </summary>
+    /// <param name="type">O tipo a ser analisado</param>
+    /// <param name="columnName">O nome da coluna</param>
+    /// <returns>O SQL gerado</returns>
+    /// <exception cref="MissingAttributeException">O tipo não tem o atributo <see cref="TableAttribute"/></exception>
+    public static string GetMaxSql(Type type, string columnName) {
+        TableAttribute? tableAttr = type.GetCustomAttribute<TableAttribute>();
+        if (tableAttr is null) {
+            throw new MissingAttributeException("A table name was not specified. Declare one with TableAttribute");
+        }
+        string table = tableAttr.Name;
+        
+        string sql = "SELECT MAX(@column) FROM @table;";
+        sql = sql.Replace("@column", columnName);
+        sql = sql.Replace("@table", table);
+        return sql;
     }
 }
